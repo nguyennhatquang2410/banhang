@@ -330,6 +330,10 @@
                     <label for="sp-gia" class="form-label">Giá bán:</label>
                     <input type="number" id="sp-gia" class="form-control" min="0" required placeholder="Nhập giá bán" />
                 </div>
+                <div class="mb-3">
+                    <label for="sp-gia-nhap" class="form-label">Giá nhập:</label>
+                    <input type="number" id="sp-gia-nhap" class="form-control" min="0" placeholder="Nhập giá nhập (giá vốn)" />
+                </div>
                 <div class="d-grid gap-2 d-md-block">
                     <button type="submit" class="btn btn-primary"><i class="fas fa-plus-square"></i> Thêm/Sửa sản phẩm</button>
                     <button type="button" id="btn-xoa-sp" class="btn btn-danger" style="display: none;"><i class="fas fa-trash-alt"></i> Xóa sản phẩm</button>
@@ -470,6 +474,7 @@
         const inputBarcode = document.getElementById('sp-barcode');
         const inputTen = document.getElementById('sp-ten');
         const inputGia = document.getElementById('sp-gia');
+        const inputGiaNhap = document.getElementById('sp-gia-nhap'); // BỔ SUNG BIẾN
         const btnXoaSP = document.getElementById('btn-xoa-sp');
         const tbodySanPham = document.querySelector('#table-sanpham tbody');
         const spSearchInput = document.getElementById('sp-search');
@@ -499,6 +504,7 @@
                     inputBarcode.value = sp.barcode;
                     inputTen.value = sp.ten;
                     inputGia.value = sp.gia;
+                    inputGiaNhap.value = sp.giaNhap || 0; // BỔ SUNG HIỆN GIÁ NHẬP
                     barcodeDangSua = sp.barcode; 
                     btnXoaSP.style.display = 'inline-block';
                 });
@@ -551,6 +557,7 @@
                         const barcode = String(item.barcode || "").trim();
                         const ten = item.ten || "Chưa có tên";
                         const gia = Number(item.gia) || 0;
+                        const giaNhap = Number(item.giaNhap) || 0; // BỔ SUNG GIÁ NHẬP TRONG JSON
                         const qr = item.qr || ""; 
 
                         if (barcode) {
@@ -560,6 +567,7 @@
                                 // Cập nhật sản phẩm đã có
                                 sanphamList[existingIndex].ten = ten;
                                 sanphamList[existingIndex].gia = gia;
+                                sanphamList[existingIndex].giaNhap = giaNhap; // BỔ SUNG CẬP NHẬT GIÁ NHẬP
                                 if (qr) sanphamList[existingIndex].qr = qr;
                                 countUpdate++;
                             } else {
@@ -568,6 +576,7 @@
                                     barcode: barcode,
                                     ten: ten,
                                     gia: gia,
+                                    giaNhap: giaNhap, // BỔ SUNG LƯU GIÁ NHẬP
                                     qr: qr
                                 });
                                 countNew++;
@@ -607,6 +616,7 @@
             if (!barcode) {
                 inputTen.value = '';
                 inputGia.value = '';
+                inputGiaNhap.value = ''; // BỔ SUNG
                 barcodeDangSua = null;
                 btnXoaSP.style.display = 'none';
                 return;
@@ -615,11 +625,13 @@
             if (sp) {
                 inputTen.value = sp.ten;
                 inputGia.value = sp.gia;
+                inputGiaNhap.value = sp.giaNhap || 0; // BỔ SUNG HIỆN GIÁ NHẬP KHI GÕ BARCODE
                 barcodeDangSua = sp.barcode;
                 btnXoaSP.style.display = 'inline-block';
             } else {
                 inputTen.value = '';
                 inputGia.value = '';
+                inputGiaNhap.value = ''; // BỔ SUNG
                 barcodeDangSua = null;
                 btnXoaSP.style.display = 'none';
             }
@@ -633,6 +645,8 @@
             const barcode = inputBarcode.value.trim();
             const ten = inputTen.value.trim();
             const gia = parseInt(inputGia.value);
+            const giaNhap = parseInt(inputGiaNhap.value) || 0; // BỔ SUNG LẤY GIÁ TRỊ GIÁ NHẬP
+
             if (!barcode || !ten || isNaN(gia) || gia < 0) {
                 alert('Vui lòng nhập đầy đủ thông tin hợp lệ!');
                 return;
@@ -643,6 +657,7 @@
                 if (index !== -1) {
                     sanphamList[index].ten = ten;
                     sanphamList[index].gia = gia;
+                    sanphamList[index].giaNhap = giaNhap; // BỔ SUNG CẬP NHẬT GIÁ NHẬP
                     alert('Cập nhật sản phẩm thành công!');
                 }
             } else {
@@ -650,7 +665,7 @@
                     alert('Barcode đã tồn tại, vui lòng sửa hoặc nhập barcode khác!');
                     return;
                 }
-                sanphamList.push({ barcode, ten, gia });
+                sanphamList.push({ barcode, ten, gia, giaNhap }); // BỔ SUNG LƯU GIÁ NHẬP MỚI
                 alert('Thêm sản phẩm mới thành công!');
             }
             formSanPham.reset();
@@ -1037,24 +1052,14 @@
         }
 
         function tinhLoiNhuan() {
-            const giaNhapTB = {};
-            const tongSLNhap = {};
-            nhapHangList.forEach(nh => {
-                if (!giaNhapTB[nh.barcode]) {
-                    giaNhapTB[nh.barcode] = 0;
-                    tongSLNhap[nh.barcode] = 0;
-                }
-                const sp = sanphamList.find(s => s.barcode === nh.barcode);
-                const giaNhap = sp ? sp.gia : 0; 
-                giaNhapTB[nh.barcode] = (giaNhapTB[nh.barcode] * tongSLNhap[nh.barcode] + nh.soluong * giaNhap) / (tongSLNhap[nh.barcode] + nh.soluong);
-                tongSLNhap[nh.barcode] += nh.soluong;
-            });
-
             let tongGiaVon = 0;
             danhSachDon.forEach(don => {
                 don.items.forEach(item => {
-                    const avgNhap = giaNhapTB[item.barcode] || 0;
-                    tongGiaVon += item.soluong * avgNhap;
+                    // TÌM SẢN PHẨM TRONG DANH SÁCH ĐỂ LẤY GIÁ NHẬP THỰC TẾ
+                    const sp = sanphamList.find(s => s.barcode === item.barcode);
+                    // NẾU CÓ GIÁ NHẬP THÌ LẤY GIÁ NHẬP, KHÔNG THÌ MẶC ĐỊNH LÀ 0 (HOẶC GIÁ BÁN NẾU MUỐN)
+                    const giaNhapThucTe = (sp && sp.giaNhap) ? sp.giaNhap : 0;
+                    tongGiaVon += item.soluong * giaNhapThucTe;
                 });
             });
 
