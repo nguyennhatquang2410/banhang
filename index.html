@@ -894,7 +894,7 @@
             }
         });
 
-        formNhapHang.addEventListener('submit', e => {
+formNhapHang.addEventListener('submit', e => {
             e.preventDefault();
 
             const barcode = nhBarcodeInput.value.trim();
@@ -911,6 +911,7 @@
 
             let sp = sanphamList.find(sp => sp.barcode === barcode);
 
+            // NẾU SẢN PHẨM CHƯA CÓ TRONG DANH MỤC: Thêm mới vào sanphamList
             if (!sp) {
                 const tenThuCong = tenSPNhapInput.value.trim();
                 const giaThuCong = parseInt(giaSPNhapInput.value);
@@ -924,10 +925,10 @@
                     return;
                 }
                 sp = { barcode, ten: tenThuCong, gia: giaThuCong };
-                sanphamList.push(sp);
-                renderSanPham();
+                sanphamList.push(sp); // Thêm vào danh mục sản phẩm chính
             }
 
+            // Thêm vào danh sách nhập hàng
             nhapHangList.push({
                 barcode,
                 ten: sp.ten,
@@ -935,8 +936,11 @@
                 ngayNhap: new Date().toLocaleString(),
             });
 
-            luuDuLieu();
+            // QUAN TRỌNG: Lưu tất cả thay đổi và render lại giao diện
+            luuDuLieu(); 
             renderNhapHang();
+            renderSanPham(); // Cập nhật lại bảng sản phẩm
+            renderTonKho();  // Cập nhật lại số lượng tồn kho
 
             formNhapHang.reset();
             nhapThongTinSPNhapDiv.style.display = 'none';
@@ -1070,27 +1074,35 @@
             document.getElementById('tong-doanh-thu').textContent = formatFullCurrency(tinhDoanhThu());
             document.getElementById('loi-nhuan').textContent = formatFullCurrency(tinhLoiNhuan());
         }
-
-        function tinhTonKho() {
+function tinhTonKho() {
             const tonkho = {};
+            
+            // Khởi tạo tất cả sản phẩm trong danh mục bằng 0
             sanphamList.forEach(sp => {
                 tonkho[sp.barcode] = 0; 
             });
 
+            // Cộng dồn từ danh sách nhập hàng
             nhapHangList.forEach(e => {
-                if (!tonkho[e.barcode]) tonkho[e.barcode] = 0;
-                tonkho[e.barcode] += e.soluong;
+                if (tonkho.hasOwnProperty(e.barcode)) {
+                    tonkho[e.barcode] += e.soluong;
+                } else {
+                    tonkho[e.barcode] = e.soluong;
+                }
             });
 
+            // Trừ đi số lượng đã bán trong danh sách đơn
             danhSachDon.forEach(don => {
                 don.items.forEach(item => {
-                    if (!tonkho[item.barcode]) tonkho[item.barcode] = 0; 
-                    tonkho[item.barcode] -= item.soluong;
+                    if (tonkho.hasOwnProperty(item.barcode)) {
+                        tonkho[item.barcode] -= item.soluong;
+                    } else {
+                        tonkho[item.barcode] = -item.soluong;
+                    }
                 });
             });
             return tonkho;
         }
-
         function renderTonKho() {
             const tbody = document.getElementById("tonkho-body");
             tbody.innerHTML = "";
